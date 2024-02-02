@@ -1,18 +1,28 @@
 import {
   Body,
   Controller,
+  FileTypeValidator,
   Get,
   HttpStatus,
+  MaxFileSizeValidator,
   Param,
+  ParseFilePipe,
   Post,
   Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
+import { diskStorage } from 'multer';
 import {
+  AudioToTextDto,
+  ImageGenerationDto,
   OrthographyDto,
   ProsConsDiscusserDto,
   TexToAudioDto,
   TranslateDto,
+  imageVariationDto,
 } from './dtos';
 import { GptService } from './gpt.service';
 
@@ -81,5 +91,64 @@ export class GptController {
     res.setHeader('Content-Type', 'audio/mp3');
     res.status(HttpStatus.OK);
     res.sendFile(filePath);
+  }
+
+  // Aca usamos un interceptors
+  @Post('audio-to-text')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './generated/uploads',
+        filename: (req, file, callback) => {
+          // Lo corto por los puntos y ahi agarro la ultima posicion
+          const fileExtension = file.originalname.split('.').pop();
+          const fileName = `${new Date().getTime()}.${fileExtension}`; //123123123.mp3 tenemos algo asi
+          return callback(null, fileName);
+        },
+      }),
+    }),
+  )
+  async audioTotext(
+    @UploadedFile(
+      // Los pipes en nestjs permiten hacer una transformacion
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({
+            // Aca en el maxSize le indicamos que no sea mayor a 5mb
+            maxSize: 1000 * 1024 * 5,
+            message: 'File es bigger than 5 mb',
+          }),
+          new FileTypeValidator({
+            fileType: 'audio/*',
+          }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+    @Body() audioToTextDto: AudioToTextDto,
+  ) {
+    // console.log({ file });
+
+    return this.gptService.audioTotext(file, audioToTextDto);
+  }
+
+  @Post('image-generation')
+  async imageGeneration(@Body() imageGenerationDto: ImageGenerationDto) {
+    return await this.gptService.imageGeneration(imageGenerationDto);
+  }
+
+  @Get('image-generation/:filename')
+  async getGeneratedImage(
+    @Res() res: Response,
+    @Param('filename') fileName: string,
+  ) {
+    const filePath = this.gptService.getGeneratedImage(fileName);
+    res.status(HttpStatus.OK);
+    res.sendFile(filePath);
+  }
+
+  @Post('image-variation')
+  async imageVariation(@Body() imageVariationDto: imageVariationDto) {
+    return await this.gptService.generateImageVariation(imageVariationDto);
   }
 }

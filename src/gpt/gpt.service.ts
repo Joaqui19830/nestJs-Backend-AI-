@@ -5,12 +5,18 @@ import * as path from 'path';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import OpenAI from 'openai';
 import {
+  AudioToTextDto,
+  ImageGenerationDto,
   OrthographyDto,
   ProsConsDiscusserDto,
   TexToAudioDto,
   TranslateDto,
+  imageVariationDto,
 } from './dtos';
 import {
+  audioTotextUseCase,
+  imageGenerationUseCase,
+  imageVariationUseCase,
   orthographyCheckUseCase,
   prosConsDicusserStreamUseCase,
   prosConsDicusserUseCase,
@@ -19,6 +25,7 @@ import {
 } from './use-cases';
 
 // Los servicios van a verse como un lugar centralizado para mantener informacion
+// Y son los que van a terminar llamando los casos de uso
 @Injectable()
 export class GptService {
   // Generamos la instancia y la mandamos en nuesto caso de uso
@@ -61,5 +68,35 @@ export class GptService {
     if (!wasFound) throw new NotFoundException(`file ${fileId} not found`);
 
     return filePath;
+  }
+
+  async audioTotext(
+    audioFile: Express.Multer.File,
+    audioToTextDto: AudioToTextDto,
+  ) {
+    const { prompt } = audioToTextDto;
+
+    return await audioTotextUseCase(this.openai, { audioFile, prompt });
+  }
+
+  async imageGeneration(imageGenerationDto: ImageGenerationDto) {
+    return await imageGenerationUseCase(this.openai, { ...imageGenerationDto });
+  }
+
+  getGeneratedImage(fileName: string) {
+    const filePath = path.resolve('./', './generated/images/', fileName);
+
+    const exists = fs.existsSync(filePath);
+
+    // Este error automaticamente regresa un 404 si no existe
+    if (!exists) throw new NotFoundException(`File not found`);
+
+    // console.log(filePath);
+
+    return filePath;
+  }
+
+  async generateImageVariation({ baseImage }: imageVariationDto) {
+    return await imageVariationUseCase(this.openai, { baseImage });
   }
 }
