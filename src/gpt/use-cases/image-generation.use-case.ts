@@ -13,7 +13,7 @@ export const imageGenerationUseCase = async (
   options: Options,
 ) => {
   const { prompt, originalImage, maskImage } = options;
-  // console.log({prompt, originalImage, maskImage});
+  // console.log({ prompt, originalImage, maskImage });
 
   //   TODO: Verificar originalImage
   if (!originalImage || !maskImage) {
@@ -26,10 +26,10 @@ export const imageGenerationUseCase = async (
       response_format: 'url',
     });
 
-    // TODO: Guardar la imagen en FS.
+    // Guardar la imagen en FS.
     const fileName = await downloadImageAsPng(response.data[0].url);
-    const url = `${process.env.SERVER_URL}gpt/image-generation/${fileName}`;
-    //   console.log(response);
+    const url = `${process.env.SERVER_URL}/gpt/image-generation/${fileName}`;
+    // console.log(response);
 
     return {
       url: url, // localhost:3000/gpt/image-generation/170689009767032.png
@@ -56,7 +56,7 @@ export const imageGenerationUseCase = async (
   });
 
   const fileName = await downloadImageAsPng(response.data[0].url);
-  const url = `${process.env.SERVER_URL}gpt/image-generation/${fileName}`;
+  const url = `${process.env.SERVER_URL}/gpt/image-generation/${fileName}`;
 
   return {
     url: url, //localhost:3000/gpt/image-generation/170689009767034.png
